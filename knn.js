@@ -53,19 +53,20 @@ function weightedkNN(data, vec, k, weight_func){
 
 	k              = k || 5
 	weight_func    = weight_func || gaussianWeight
-	
+
 	// get distances
 	distances_list = getDistances(data, vec)
 
 	// get weighted average
 	for( i =0; i < k; i++){
-		distance = distances_list[i].distance
-		index = distances_list[i].index
-		weight = weight_func(distance)
-		avg += weight * data[index].price
+		distance     = distances_list[i].distance
+		index        = distances_list[i].index
+		weight       = weight_func(distance)
+		avg          += weight * data[index].price
 		total_weight += weight
 	}// for
 
+	total_weight = total_weight === 0? 0.01 : total_weight // verifying we won't divide by zero!
 	avg /= total_weight
 	return avg
 }
@@ -79,7 +80,7 @@ function weightedkNN(data, vec, k, weight_func){
 // converting Distance to Weight 
 // it basically looks like abs (1/x), x > 0
 function inverseWeight(distance, num, constant){
-	num = num || 1.0
+	num      = num || 1.0
 	constant = constant || 0.1
 
 	return num / (distance + constant)
@@ -104,6 +105,31 @@ function gaussianWeight(distance, sigma){
 	return Math.exp( - (distance * distance * 10 * 10) /  (2 * sigma * sigma))
 }
 
+
+// Cleaning the data section [normalization and minimizing dimensions]
+// receives: data - list of objects
+// 			 scale - list of properties with scale factors (real numbers)
+function rescale(data, scale){
+	var scale_data = [],
+		i,
+		scale_len = scale.length,
+		data_len = data.length,
+		scaled
+
+	for(i = 0; i < data_len; i++){
+		scaled = data[i]  // getting the properties of the object
+
+		for(property in scaled){
+
+			if (scale.hasOwnProperty(property)){
+				scaled[property] = scale[property] * data[i][property]	
+			}// if - property
+		}// for - property
+		scale_data.push(scaled)
+	}// for - data
+	//return scale_data
+	return scale_data
+}
 
 
 // cross validation section
@@ -148,7 +174,7 @@ function testAlgo(algo_func, train_set, test_set){
 // cross validate - responsible for different divisions of the data
 // and running the test algo on each, adding up the results to get 
 // a final score
-
+// it's basically a COST function - returning a higher value for worse solution
 function crossValidate(algo_func, data, trials, test){
 	var error = 0.0,
 		train_set,
@@ -169,6 +195,18 @@ function crossValidate(algo_func, data, trials, test){
 	return error / trials
 }
 
+// a wrapper function for crossValidate , which is a cost function
+// here we're auto-scaling
+function createCostFunction(algo_func, data){
+	function cost(scale){
+		var trials = 10,
+			scaled_data
+		scaled_data = rescale(data,scale)
+		return crossValidate(algo_func, scaled_data, trials)
+	}
+	return cost
+}
+
 
 module.exports = {
 	getDistances: getDistances,
@@ -179,6 +217,8 @@ module.exports = {
 	subtractWeight: subtractWeight,
 	gaussianWeight: gaussianWeight,
 
+	// normalization / rescaling
+	rescale: rescale,
 	// cross validation function
 	crossValidate: crossValidate
 }
