@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "jshint": "^2.5.5",
+    "underscore": "^1.7.0"
+  }
+}
