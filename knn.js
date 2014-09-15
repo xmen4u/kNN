@@ -105,6 +105,71 @@ function gaussianWeight(distance, sigma){
 }
 
 
+
+// cross validation section
+// usually CV is performed several times, dividing the data up differently each time. Typically the test
+// set will be small portion, perhaps 5% of all the data
+// with the remaining 95% making up the training set
+function divideData(data, test){
+	var train_set = [],
+		test_set = [],
+		i,
+		len = data.length
+
+	test = test || 0.05	// how much to test? 5%
+
+	for(i = 0; i < len; i++){
+
+		if (Math.random() < test){
+			test_set.push(data[i])
+		} // if
+		else{
+			train_set.push(data[i])
+		}
+	}// for
+	return {train_set: train_set, test_set: test_set}
+}
+
+// basically this is a RMSE 
+function testAlgo(algo_func, train_set, test_set){
+	var error = 0.0,
+		i,
+		test_set_len = test_set.length,
+		guess
+
+	for(i = 0; i < test_set_len; i++){
+		guess = algo_func(train_set, test_set[i])
+		error += (test_set[i].price - guess) * (test_set[i].price - guess)
+	}
+
+	return error / test_set_len
+}
+
+// cross validate - responsible for different divisions of the data
+// and running the test algo on each, adding up the results to get 
+// a final score
+
+function crossValidate(algo_func, data, trials, test){
+	var error = 0.0,
+		train_set,
+		test_set,
+		divide_ret,
+		i
+
+	trials = trials || 100
+	test   = test || 0.05
+
+	for(i = 0; i < trials; i++){
+		divide_ret = divideData(data,test)
+		train_set  = divide_ret.train_set
+		test_set   = divide_ret.test_set
+		error      += testAlgo(algo_func, train_set, test_set)
+	}
+
+	return error / trials
+}
+
+
 module.exports = {
 	getDistances: getDistances,
 	kNNEstimate: kNNEstimate,
@@ -112,5 +177,8 @@ module.exports = {
 	// weight functions
 	inverseWeight: inverseWeight,
 	subtractWeight: subtractWeight,
-	gaussianWeight: gaussianWeight
+	gaussianWeight: gaussianWeight,
+
+	// cross validation function
+	crossValidate: crossValidate
 }
